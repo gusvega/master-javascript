@@ -1,42 +1,39 @@
-name: Example Workflow
+name: Extended Workflow with Linux Commands
 
 on: [push]
 
 jobs:
-  job1:
+  prepare_environment:
     runs-on: ubuntu-latest
     outputs:
-      output1: ${{ steps.set_output.outputs.result }}
+      status: ${{ steps.check_status.outputs.result }}
     steps:
     - uses: actions/checkout@v3
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '14'
-    - name: Run script and set output
-      id: set_output
+    - name: Check Disk Usage
+      id: check_status
       run: |
-        echo "::set-output name=result::$(node -e 'console.log("output from job1")')"
+        node -e '
+          const { exec } = require("child_process");
+          exec("df -h", (error, stdout, stderr) => {
+            if (error) {
+              console.error(`exec error: ${error}`);
+              return;
+            }
+            if (stderr) {
+              console.error(`stderr: ${stderr}`);
+              return;
+            }
+            console.log(`stdout: ${stdout}`);
+            console.log("::set-output name=result::success");
+          });
+        '
 
-  job2:
-    needs: job1
-    runs-on: ubuntu-latest
-    outputs:
-      output2: ${{ steps.set_output.outputs.result }}
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '14'
-    - name: Use output from Job 1
-      id: set_output
-      run: |
-        echo "Using output from Job 1: ${{ needs.job1.outputs.output1 }}"
-        echo "::set-output name=result::$(node -e 'console.log("output from job2")')"
-
-  job3:
-    needs: [job1, job2]
+  test_application:
+    needs: prepare_environment
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -44,8 +41,61 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '14'
-    - name: Use outputs from Job 1 and Job 2
+    - name: Run Unit Tests
       run: |
-        echo "Using output from Job 1: ${{ needs.job1.outputs.output1 }}"
-        echo "Using output from Job 2: ${{ needs.job2.outputs.output2 }}"
-        node -e 'console.log("Final action based on previous outputs")'
+        node -e '
+          const { exec } = require("child_process");
+          exec("make test", (error, stdout, stderr) => {
+            if (error) {
+              console.error(`exec error: ${error}`);
+              return;
+            }
+            if (stderr) {
+              console.error(`stderr: ${stderr}`);
+              return;
+            }
+            console.log(`stdout: ${stdout}`);
+          });
+        '
+
+  deploy:
+    needs: test_application
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+    - name: Deploy to Production
+      run: |
+        node -e '
+          const { exec } = require("child_process");
+          exec("echo Deploying application", (error, stdout, stderr) => {
+            if (error) {
+              console.error(`exec error: ${error}`);
+              return;
+            }
+            if (stderr) {
+              console.error(`stderr: ${stderr}`);
+              return;
+            }
+            console.log(`stdout: ${stdout}`);
+          });
+        '
+    - name: Cleanup Temporary Files
+      run: |
+        node -e '
+          const { exec } = require("child_process");
+          exec("rm -rf /tmp/*", (error, stdout, stderr) => {
+            if (error) {
+              console.error(`exec error: ${error}`);
+              return;
+            }
+            if (stderr) {
+              console.error(`stderr: ${stderr}`);
+              return;
+            }
+            console.log("Temporary files cleaned up.");
+          });
+        '

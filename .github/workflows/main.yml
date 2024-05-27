@@ -16,7 +16,7 @@ jobs:
     - name: Run script and set output
       id: set_output
       run: |
-        echo "result=$(node -e 'console.log("output from job1")')" >> $GITHUB_ENV
+        echo "::set-output name=result::$(node -e 'console.log("output from job1")')"
 
   job2:
     needs: job1
@@ -32,8 +32,8 @@ jobs:
     - name: Use output from Job 1
       id: set_output
       run: |
-        echo "Using environment output from Job 1: $result"
-        echo "result=$(node -e 'console.log("output from job2")')" >> $GITHUB_ENV
+        echo "Using output from Job 1: ${{ needs.job1.outputs.output1 }}"
+        echo "::set-output name=result::$(node -e 'console.log("output from job2")')"
 
   job3:
     needs: [job1, job2]
@@ -44,7 +44,8 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '14'
-    - name: Use environment outputs from Job 1 and Job 2
+    - name: Use outputs from Job 1 and Job 2
       run: |
-        echo "Using environment output from Job 1 and Job 2: $result"
-        node -e 'console.log("Performing actions based on previous outputs")'
+        echo "Using output from Job 1: ${{ needs.job1.outputs.output1 }}"
+        echo "Using output from Job 2: ${{ needs.job2.outputs.output2 }}"
+        node -e 'console.log("Final action based on previous outputs")'

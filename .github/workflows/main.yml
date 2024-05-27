@@ -1,0 +1,50 @@
+name: Example Workflow
+
+on: [push]
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    outputs:
+      output1: ${{ steps.set_output.outputs.result }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+    - name: Run script and set output
+      id: set_output
+      run: |
+        echo "result=$(node -e 'console.log("output from job1")')" >> $GITHUB_ENV
+
+  job2:
+    needs: job1
+    runs-on: ubuntu-latest
+    outputs:
+      output2: ${{ steps.set_output.outputs.result }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+    - name: Use output from Job 1
+      id: set_output
+      run: |
+        echo "Using environment output from Job 1: $result"
+        echo "result=$(node -e 'console.log("output from job2")')" >> $GITHUB_ENV
+
+  job3:
+    needs: [job1, job2]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+    - name: Use environment outputs from Job 1 and Job 2
+      run: |
+        echo "Using environment output from Job 1 and Job 2: $result"
+        node -e 'console.log("Performing actions based on previous outputs")'
